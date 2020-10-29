@@ -12,7 +12,7 @@ export class TestController {
   @auth
   async test1(ctx: Koa.Context, next: Koa.Next) {
     console.log(ctx.query.name)
-    console.log(ctx.request.body)
+    //console.log(ctx.request.body)
     // const validate =  new TestValidator()
     // if (await validate.check(ctx.query)) {
     //   // console.log(validate.getErrorInfo())
