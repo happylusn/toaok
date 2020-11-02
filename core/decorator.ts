@@ -51,7 +51,7 @@ export class AutoLoadController {
 const normalizePath = (path: string) => path.startsWith('/') ? path : `/${path}`
 
 function router(conf: RouterConf) {
-  return function(target: any, key: string, descriptor: {[propsName: string]: any}) {
+  return function(target: any, key: string, descriptor: PropertyDescriptor) {
     if (conf.REG_EXP !== true) { // 非正则路由
       conf.path = normalizePath(conf.path as string);
     }
@@ -122,18 +122,32 @@ const decorate = (middleware: Function, ...args: any[]) => {
 
   target[key] = isArray(target[key])
   target[key].unshift(middleware)
-
-  return descriptor
 }
 
-function convert(middleware: Function) {
-  return function(target: any, key: string, descriptor: {[propsName: string]: any}) {
+function convert(middleware: Function): Function {
+  return function(target: any, key: string, descriptor: PropertyDescriptor) {
     return decorate(middleware, target, key, descriptor)
   }
 }
 
-//是否登录
-export const auth = convert(async (ctx: Koa.Context, next: Koa.Next) => {
+const authMiddleWare =  (level?: number) => async (ctx: Koa.Context, next: Koa.Next) => {
   console.log('auth middlewares')
   await next()
-})
+}
+
+//是否登录
+export  function auth(level: number): Function;
+export  function auth(target: any, key: string, propertyDescriptor?: PropertyDescriptor): void;
+export  function auth(...args: any[]) {
+  if (args.length >= 2) {
+    decorate(authMiddleWare(), args[0], args[1], args[2])
+  } else {
+    return convert(authMiddleWare(args[0]))
+  }
+}
+
+//是否登录
+// export const auth = convert(async (ctx: Koa.Context, next: Koa.Next) => {
+//   console.log('auth middlewares')
+//   await next()
+// })
