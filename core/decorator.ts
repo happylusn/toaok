@@ -130,6 +130,11 @@ function convert(middleware: Function): Function {
   }
 }
 
+type DecoratorMiddle<T> = (params?: T) => (ctx: Koa.Context, next: Koa.Next) => void
+export function adorn<T>(middleware: DecoratorMiddle<T>, params?: T) {
+  return convert(middleware(params))
+}
+
 const authMiddleWare =  (level?: number) => async (ctx: Koa.Context, next: Koa.Next) => {
   console.log('auth middlewares')
   await next()

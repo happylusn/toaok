@@ -1,15 +1,19 @@
 import Koa from 'koa'
-import { controller, get, auth, all } from '../../../core/decorator'
+import { controller, get, auth, all, adorn } from '../../../core/decorator'
 import { TestValidator } from '../../validators/validator'
 // import User from '../../models/User'
 // import Book from '../../models/Book'
 // import BookComment from '../../models/BookComment'
-
+const customDecorator = (param?: number) => async (ctx: Koa.Context, next: Koa.Next) => {
+  console.log('ff...', param)
+  await next()
+}
 
 @controller('/v1/test')
 export class TestController {
   @all('/test1')
   @auth
+  @adorn(customDecorator, 999)
   async test1(ctx: Koa.Context, next: Koa.Next) {
     console.log(ctx.query.name)
     //console.log(ctx.request.body)
