@@ -1,5 +1,4 @@
 import { ParameterException } from './http-exception'
-import { ABSTRACT } from 'sequelize'
 
 const alias = {
   '>': 'gt',
@@ -93,27 +92,30 @@ export class Rule<T extends string = string, K extends IRule = IRule> {
   
 }
 
-export class ToaokValidate {
+export class ToaokValidator {
   protected error: {[key: string]: string[]} = {} //错误信息
   constructor(protected rules: RuleItem[] = [], public autoThrow: boolean = true) {}
 
-  async check(data: IObj, singleThrow: boolean = true) {
+  async check(data: IObj, singleErrorMode: boolean = true) {
     for (const key in this.rules) {
       const item = this.rules[key]
       const field = item.field // 要验证的字段名
       const rules = item.rules // 验证的规则数组
       // 获取字段的值
       const value = this.getDataValue(data, field)
-      await this.checkItem(field, value, rules, data, singleThrow)
+      const result = await this.checkItem(field, value, rules, data, singleErrorMode)
+      if (singleErrorMode === true && result === false) {
+        return result
+      }
     }
     const result = Object.keys(this.error).length === 0
     if (result === false && this.autoThrow === true) {
-      throw new ParameterException();
+      throw new ParameterException(this.getErrorInfo());
     }
     return result
   }
 
-  protected async checkItem(field: string, value: any, rules: Rule[], data: IObj, singleThrow: boolean) {
+  protected async checkItem(field: string, value: any, rules: Rule[], data: IObj, singleErrorMode: boolean) {
     let result = false
     for (let key in rules) {
       let rule: Rule = rules[key] // 规则对象
@@ -129,7 +131,7 @@ export class ToaokValidate {
         methodName = 'is'
       }
       // 如果不是require 有数据才会行验证 或者自定义方法也会验证
-      if (ruleName === 'require' || ruleName.startsWith('validate') || (value != null && '' !== value)) {
+      if (ruleName === 'require' || ruleName.startsWith('validate') || value != null) {
         // 执行验证方法
         result = await this[methodName](value, rule, data)
       } else {
@@ -142,8 +144,11 @@ export class ToaokValidate {
         } else {
           this.error[field].push(msg)
         }
-        if (singleThrow === true && this.autoThrow === true) {
+        if (singleErrorMode === true && this.autoThrow === true) {
           throw new ParameterException(msg);
+        }
+        if (singleErrorMode === true ) {
+          return false
         }
       }
     }
@@ -153,12 +158,12 @@ export class ToaokValidate {
   protected getDataValue(data: IObj, key: string): any {
     let value = null;
     if (key.indexOf('.') > 0) {
-        // 支持二维数组验证
-        let a = key.split('.')
-        const k = a.shift()
-        value = this.getDataValue(data[k!], a.join('.'))
+      // 支持二维数组验证
+      let a = key.split('.')
+      const k = a.shift()
+      value = this.getDataValue(data[k!], a.join('.'))
     } else {
-        value = data[key] ? data[key] : null
+      value = data[key]
     }
     return value 
   }
@@ -166,7 +171,7 @@ export class ToaokValidate {
     let msg = rule.msg;
     let ruleName = rule.name
     let params = rule.params
-    if (typeof msg === 'undefined') {
+    if (typeof msg === 'undefined' || msg === '') {
       if (typeMsg[rule.name]) {
         msg = typeMsg[rule.name] as string
       } else {
@@ -244,7 +249,7 @@ export class ToaokValidate {
     if (value instanceof Array) {
       length = value.length
     } else {
-      length = value.toString().length;
+      length = value.toString().length
     }
 
     if (rule.params instanceof Array) {
@@ -342,7 +347,7 @@ export class ToaokValidate {
     switch (rule.name) {
       case 'require':
         // 必须
-        result = (value != null && '' !== value) || '0' === value;
+        result = value != null// (value != null && '' !== value) || '0' === value;
         break;
       case 'accepted':
         // 接受

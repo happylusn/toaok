@@ -1,5 +1,5 @@
 import Koa from 'koa'
-import { controller, get, auth, all, adorn } from '../../../core/decorator'
+import { controller, get, auth, all, adorn, required } from '../../../core/decorator'
 import { TestValidator } from '../../validators/validator'
 // import User from '../../models/User'
 // import Book from '../../models/Book'
@@ -14,6 +14,9 @@ export class TestController {
   @all('/test1')
   @auth
   @adorn(customDecorator, 999)
+  @required({
+    query: ['name', 'sex|性别']
+  }, true)
   async test1(ctx: Koa.Context, next: Koa.Next) {
     console.log(ctx.query.name)
     //console.log(ctx.request.body)

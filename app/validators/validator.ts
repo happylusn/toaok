@@ -1,6 +1,6 @@
-import { ToaokValidate, Rule } from '../../core/toaok-validate-v2'
+import { ToaokValidator, Rule } from '../../core/toaok-validator-v2'
 
-export class TestValidator extends ToaokValidate {
+export class TestValidator extends ToaokValidator {
   constructor() {
     super()
     this.rules = [

@@ -3,6 +3,8 @@ import Router from 'koa-router'
 import path from 'path'
 import glob from 'glob'
 import _ from 'lodash'
+import R from 'ramda'
+import { ParameterException } from './http-exception'
 
 interface RouterConf {
   method: 'get' | 'post' | 'put' | 'delete' | 'all' | 'use';
@@ -37,7 +39,7 @@ export class AutoLoadController {
 
         if (prefixPath) prefixPath = normalizePath(prefixPath)
 
-        if (prefixPath == '/') prefixPath = '';
+        if (prefixPath == '/') prefixPath = ''
         routerPath = prefixPath + conf.path
       }
       this.router[conf.method](routerPath, ...controllers)
@@ -48,7 +50,11 @@ export class AutoLoadController {
   }
 }
 
-const normalizePath = (path: string) => path.startsWith('/') ? path : `/${path}`
+const normalizePath = (path: string) => {
+  path = path.startsWith('/') ? path : `/${path}`
+  path = path.endsWith('/') ? path.substring(0, path.length - 1) : path
+  return path
+}
 
 function router(conf: RouterConf) {
   return function(target: any, key: string, descriptor: PropertyDescriptor) {
@@ -156,3 +162,50 @@ export  function auth(...args: any[]) {
 //   console.log('auth middlewares')
 //   await next()
 // })
+interface Rules {
+  query?: string[];
+  body?: string[];
+}
+// 对前端传过来的字段进行校验
+export const required = (rules: Rules, strict: boolean = false) => convert(async (ctx: Koa.Context, next: Koa.Next) => {
+  let errors: string[] = []
+
+  const checkRules = R.forEachObjIndexed(
+    (value: string[], key) => {
+      const pushError = (value: string[]) => {
+        value.forEach(i => {
+          let t = i
+          if (i.indexOf('|') > 0) {
+            let a = i.split('|')
+            i = a[0]
+            t = a[1]
+          }
+          if (!R.has(i, ctx.request[key])) {
+            errors.push(t)
+            return
+          }
+          if (strict === true) {
+            const v = ctx.request[key][i]
+            if (!(null != v && '' !== v || '0' === v)) {
+              errors.push(t)
+            }
+          }
+        })
+      }
+      if (ctx.request.method === 'POST') {
+        pushError(value)
+      } else {
+        if (key !== 'body') {
+          pushError(value)
+        }
+      }
+    }
+  )
+  if (R.has('query', rules) || R.has('body', rules)) {
+    checkRules(rules)
+  }
+  if (errors.length > 0) {
+    throw new ParameterException(`${errors.join(',')} is required`)
+  }
+  await next()
+})
