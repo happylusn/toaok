@@ -86,20 +86,46 @@ interface RuleItem {
   field: string;
   rules: Rule[]
 }
+type CheckOptions = {
+  fieldAlias?: {[key: string]: string};
+  singleErrorMode?: boolean;
+}
 
 export class Rule<T extends string = string, K extends IRule = IRule> {
   constructor(public name: T | K, public msg?: string, public params?: RuleParam[K]) {}
-  
 }
 
 export class ToaokValidator {
   protected error: {[key: string]: string[]} = {} //错误信息
   constructor(protected rules: RuleItem[] = [], public autoThrow: boolean = true) {}
 
-  async check(data: IObj, singleErrorMode: boolean = true) {
+  addRule(field: string | RuleItem[], rule: Rule) {
+    if (typeof field === 'string' && rule) {
+      this.rules.push({field, rules: [rule]})
+    } else {
+      this.rules = [...this.rules, ...(field as RuleItem[])]
+    }
+    // const index = this.rules.findIndex(item => item.field === field)
+    // if (index > -1) {
+    //   this.rules[index].rules.push(rule)
+    // } else {
+    //   this.rules.push({field, rules: [rule]})
+    // }
+  }
+
+  async check(data: IObj, options?: CheckOptions) {
+    let fieldAlias = {}
+    let singleErrorMode = true
+    if (options) {
+      if (typeof options.fieldAlias !== 'undefined') fieldAlias = options.fieldAlias
+      if (typeof options.singleErrorMode !== 'undefined') singleErrorMode = options.singleErrorMode
+    }
     for (const key in this.rules) {
       const item = this.rules[key]
-      const field = item.field // 要验证的字段名
+      let field = item.field // 要验证的字段名
+      if (fieldAlias[field]) {
+        field = fieldAlias[field]
+      }
       const rules = item.rules // 验证的规则数组
       // 获取字段的值
       const value = this.getDataValue(data, field)
