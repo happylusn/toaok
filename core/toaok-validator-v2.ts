@@ -65,8 +65,8 @@ type RuleParam = {
   require: undefined;
   string: undefined;
   number: undefined;
-  float: undefined;
-  integer: undefined;
+  float: {absolute: boolean};
+  integer: {absolute: boolean};
   boolean: undefined;
   email: undefined;
   array: undefined;
@@ -247,12 +247,12 @@ export class ToaokValidator {
 
   in(value: any, rule: Rule, data: IObj) {
     this.hasParams(rule)
-    return this.inArray(value.toString(), rule.params as RuleParam['in'])
+    return this.inArray(value, rule.params as RuleParam['in'])
   }
 
   notIn(value: any, rule: Rule, data: IObj) {
     this.hasParams(rule)
-    return this.inArray(value.toString(), rule.params as RuleParam['notIn'])
+    return this.inArray(value, rule.params as RuleParam['notIn'])
   }
 
   between(value: any, rule: Rule, data: IObj) {
@@ -370,6 +370,7 @@ export class ToaokValidator {
 
   is(value: any, rule: Rule, data: IObj) {
     let result = false;
+    const params = rule.params
     switch (rule.name) {
       case 'require':
         // 必须
@@ -411,15 +412,32 @@ export class ToaokValidator {
         result = /^[\u4e00-\u9fa5a-zA-Z0-9\\_\-]+$/u.test(value);
         break;
       case 'float':
-        // 是否为float
-        result = !isNaN(value) && parseFloat(value) === value;
-        break;
+        let absolute1 = true
+        if (params && typeof (params as RuleParam['float']).absolute !== 'undefined') {
+          absolute1 = (params as RuleParam['float']).absolute
+        }
+        if (absolute1) {
+          // 是否为float
+          result = !isNaN(value) && parseFloat(value) === value;
+        } else {
+          // 是否为float
+          result = !isNaN(value) && parseFloat(value) == value;
+        }
       case 'number':
         result = !isNaN(value);
         break;
       case 'integer':
-        // 是否为整型
-        result = !isNaN(value) && parseInt(value) === value;
+        let absolute2 = true
+        if (params && typeof (params as RuleParam['integer']).absolute !== 'undefined') {
+          absolute2 = (params as RuleParam['integer']).absolute
+        }
+        if (absolute2) {
+          // 是否为整型
+          result = !isNaN(value) && parseInt(value) === value;
+        } else {
+          // 是否为整型
+          result = !isNaN(value) && parseInt(value) == value;
+        }
         break;
       case 'email':
         // 是否为邮箱地址
